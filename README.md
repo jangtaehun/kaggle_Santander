@@ -39,8 +39,8 @@ Kaggle에서 고객의 정보를 토대로 Santander 은행이 제공하는 서�
     * feature 분석
     * 이상치 탐색
     * Data cleaning
-    * Feature Engineering
     * noise 처리
+    * Feature Engineering
 3. 모델 학습
   * XGBoost
   * LightGBM
@@ -85,7 +85,7 @@ Santander Customer Satisfaction data는 앞에서 말했듯 수백 개의 익명
 ---
 
 ### Santander Customer Satisfaction data set을 이용한 EDA
-#### 1. 공통 코드
+   #### 1. 공통 코드
 ```
 def get_clf_eval(y_test, pred=None, pred_proba=None):
     confusion = confusion_matrix(y_test, pred)
@@ -133,7 +133,7 @@ def get_clf_eval(y_test, pred=None, pred_proba=None):
 오차행렬과 정확도, 재현율, 정밀도, F1 score, ROC 곡선과 AUC를 설명한 이유는 앞서 설명했듯 Santander Customer Satisfaction 대회가 ROC 곡선의 아래 면적 즉, AUC를 평가 지표로 하기 때문이다. 뿐만 아니라 이전 tatinic data에서도 사용했지만 따로 설명하지 않았기 때문에 간단하게 설명했다.
 
 ---
-#### 2. 분석
+   #### 2. 분석
    ##### 1. Santander Customer Satisfaction data set에 대한 기본적인 정보
 Santander Customer Satisfaction data는 아래 사진과 같이 모든 feature가 개인정보를 이유로 feature의 이름이 모두 익명처리 되어있다.
 ![image](https://github.com/user-attachments/assets/3e4b447e-91b2-487d-931f-4c78b6b60c96)
@@ -319,19 +319,13 @@ X = X.drop(columns=['label'])  # 'label' 열 제거
 y = y.drop(outlier_index)
 ```
 
-   ##### 5. Feature Engineering
-0에 대한 처리를 진행하겠다. 지금까지 확인했듯이 Santander에서 제공한 Santander Customer Satisfaction 데이터는 0이 굉장히 많다. 따라서 이 부분에 대해서도 적절한 처리가  필요하다. 필자는 각 행(row)에서 0의 갯수를 새로운 컬럼으로 저장할 것이다. 아래의 코드를 실행하면 다음과 같이 결과가 나온다.
-```
-train_df['count_0'] = (train_df == 0).sum(axis=1)
-test_df['count_0'] = (test_df == 0).sum(axis=1)
-```
-![image](https://github.com/user-attachments/assets/6273c3a8-eead-400c-9299-342ba2683a94)
-
-   ##### 6. noise 처리
+   ##### 5. noise 처리
 다음으로 동일한 행을 가지지만 다른 타겟 값을 가지는 행이 있기 때문에 데이터를 5개로 나눈 후 모델을 학습해 노이즈 데이터에 대해 TARGET 값을 예측하겠다. 이유는 다음과 같다. 데이터를 나누어 여러 모델을 학습시키는 것은 모델의 안정성과 일반화 성능을 높이고, 데이터의 다양성을 충분히 반영하여 과적합을 방지할 수 있기 때문이다.
+아래는 LGBMClassifier를 통해 noise에 대한 TARGET 값을 예측한 것이다.
 ```
 import optuna
-import xgboost as xgb
+from lightgbm import LGBMClassifier
+from sklearn.metrics import classification_report, accuracy_score, f1_score, precision_score, recall_score
 from scipy.sparse import csr_matrix
 
 train_parts = np.array_split(X, 5)
@@ -339,76 +333,68 @@ train_y_parts = np.array_split(y, 5)
 
 def objective(trial):
     param = {
-        'objective': 'binary:logistic',
-        'eval_metric': 'auc',
-        'eta': trial.suggest_float('learning_rate', 0.001, 0.05, log=True),
-        'max_depth': trial.suggest_int('max_depth', 2, 10),
+        'objective': 'binary',
+        'metric': 'binary_logloss',
+        'boosting_type': 'gbdt',
+        'num_leaves': trial.suggest_int('num_leaves', 20, 60),
+        'min_child_samples': trial.suggest_int('min_child_samples', 5, 100),
         'min_child_weight': trial.suggest_float('min_child_weight', 0.1, 10.0),
+        'max_depth': trial.suggest_int('max_depth', 2, 10),
         'subsample': trial.suggest_float('subsample', 0.5, 0.8),
         'colsample_bytree': trial.suggest_float('colsample_bytree', 0.5, 0.8),
+        'learning_rate': trial.suggest_float('learning_rate', 0.001, 0.05, log=True),
         'scale_pos_weight': trial.suggest_float('scale_pos_weight', 1.0, 50.0),
-        'alpha': trial.suggest_float('reg_alpha', 1.0, 20.0),
-        'lambda': trial.suggest_float('reg_lambda', 1.0, 20.0),
+        'reg_alpha': trial.suggest_float('reg_alpha', 1.0, 20.0),
+        'reg_lambda': trial.suggest_float('reg_lambda', 1.0, 20.0),
         'n_estimators': trial.suggest_int('n_estimators', 100, 1000)
     }
 
     f1_scores = []
-
+    
     for train_part, train_y_part in zip(train_parts, train_y_parts):
-        dtrain = xgb.DMatrix(csr_matrix(train_part.values), label=train_y_part)   
-        bst = xgb.train(param, dtrain, num_boost_round=500)
-        y_val_pred = (bst.predict(dtrain) > 0.5).astype(int)
+        lgb_model = LGBMClassifier(**param, random_state=42)
+        lgb_model.fit(train_part, train_y_part)
+        
+        y_val_pred = lgb_model.predict(train_part)
         f1 = f1_score(train_y_part, y_val_pred)
         f1_scores.append(f1)
-
+    
     return np.mean(f1_scores)
 
 study = optuna.create_study(direction='maximize')
 study.optimize(objective, n_trials=100)
 
 best_params = study.best_params
-print("Best hyperparameters:", best_params)
-```
-```
-param = {
-    'objective': 'binary:logistic',
-    'eval_metric': 'auc',
-    'eta': best_params['learning_rate'],
-    'max_depth': best_params['max_depth'],
-    'min_child_weight': best_params['min_child_weight'],
-    'subsample': best_params['subsample'],
-    'colsample_bytree': best_params['colsample_bytree'],
-    'scale_pos_weight': best_params['scale_pos_weight'],
-    'alpha': best_params['reg_alpha'],
-    'lambda': best_params['reg_lambda'],
-    'n_estimators': best_params['n_estimators']
-}
 
+
+best_lgb_model = LGBMClassifier(**best_params, random_state=42)
 bst_models = []
 
-# 5개의 파트에 대해 학습
 for train_part, train_y_part in zip(train_parts, train_y_parts):
-    dtrain = xgb.DMatrix(csr_matrix(train_part.values), label=train_y_part)
-    bst = xgb.train(param, dtrain, num_boost_round=500)
-    bst_models.append(bst)
+    best_lgb_model.fit(train_part, train_y_part)
+    bst_models.append(best_lgb_model)
 
-# 노이즈 데이터 예측
-noise['TARGET'] = 0  # 초기값 설정
-dnoise = xgb.DMatrix(csr_matrix(noise.drop('TARGET', axis=1).values))
-noise_preds = np.mean([bst.predict(dnoise) for bst in bst_models], axis=0)
+noise['TARGET'] = 0
+noise_preds = np.mean([model.predict(noise.drop('TARGET', axis=1)) for model in bst_models], axis=0)
 
-# 0.5 이상이면 1로, 그렇지 않으면 0으로 설정
 noise['TARGET'] = (noise_preds >= 0.5).astype(int)
 
-# noise 데이터와 원래 train 데이터 병합
 X = pd.concat([X, noise.drop('TARGET', axis=1)])
 y = pd.concat([y, noise['TARGET']])
-
-# 최종 데이터 크기 출력
-print(f"Final train shape: {X.shape}")
-print(f"Final train_y shape: {y.shape}")
 ```
-위의 코드와 같이 진행하면 noise로 분류되어 삭제되었던 부분의 TARGET을 새롭게 예측해 isolationforest로 제거한 이상치 행을 제외한 75725개의 행만 남는다. 추가적으로 var15에 대해서도 추가적인 분석을 진행하던 중 특정 패턴을 발견했다. 
+noise 데이터에 대해 5개의 모델을 사용하여 타겟 값을 예측한 후 각 모델의 예측 값을 평균 내어 noise_preds에 저장하고, 그 값이 0.5 이상이면 1, 그렇지 않으면 0으로 타겟 값을 설정한 것이다.
+
+위의 코드와 같이 진행하면 noise로 분류되어 삭제되었던 부분의 TARGET을 새롭게 예측해 isolationforest로 제거한 이상치 행을 제외한 75725개의 행만 남는다. 
+
+   ##### 6. Feature Engineering
+마지막으로 0에 대한 처리를 진행하겠다. 지금까지 확인했듯이 Santander에서 제공한 Santander Customer Satisfaction 데이터는 0이 굉장히 많다. 따라서 이 부분에 대해서도 적절한 처리가  필요하다. 필자는 각 행(row)에서 0의 갯수를 새로운 컬럼으로 저장할 것이다. 아래의 코드를 실행하면 다음과 같이 결과가 나온다.
+```
+train_df['count_0'] = (train_df == 0).sum(axis=1)
+test_df['count_0'] = (test_df == 0).sum(axis=1)
+```
+![image](https://github.com/user-attachments/assets/6273c3a8-eead-400c-9299-342ba2683a94)
+
+추가적으로 var15에 대해서도 추가적인 분석을 진행하던 중 특정 패턴을 발견했다. 아래의 코드를 통해 확인할 수 있다.
 ```
 var15_values_when_target_1 = train_df[train_df['TARGET'] == 1]['var15']
 
@@ -421,3 +407,398 @@ unique_var15_values
 ---
 
 ### 모델 학습
+RandomUnderSampler() 클래스를 이용해 데이터의 불균형을 해결하기 위한 코드이다. Santander Customer Satisfaction data는 불균형한 데이터이다. 따라서 이를 처리하기 위한 방법이 필요하다. 필자는 오버샘플링, 언더샘플링, 하이브리드 샘플링에서 언더샘플링을 선택했다. 
+
+특히, 여러 모델을 사용할 것이지만 LightGBM을 위주로 학습을 할 예정이다.
+
+먼저 모델을 학습하기 전에 데이터에 대한 처리를 먼저할 것이다. StandardScaler()를 통해 특성(Feature)의 값 범위를 표준화하거나 정규화하는 과정을 거치고 데이터를 언더 샘플링을 한 후 train 세트와 test 세트로 나눌 것이다.
+```
+sc = StandardScaler()
+X = sc.fit_transform(X)
+test_df = sc.transform(test_df)
+```
+```
+from imblearn.under_sampling import RandomUnderSampler
+from sklearn.model_selection import train_test_split, KFold
+
+X_resampled, y_resampled = RandomUnderSampler(random_state=42, sampling_strategy=0.3).fit_resample(X, y)
+X_train, X_val, y_train, y_val = train_test_split(X_resampled, y_resampled, test_size=0.2, random_state=42)
+```
+
+   #### XGBoost
+먼저 XGBoost를 사용할 것이다. 하이퍼파라미터 튜닝을 위해 optuna를 사용했다.
+```
+import optuna
+from xgboost import XGBClassifier
+from sklearn.metrics import f1_score, classification_report, accuracy_score, precision_score, recall_score
+
+def objective(trial):
+    param = {
+        'objective': 'binary:logistic',
+        'eval_metric': 'logloss',
+        'booster': 'gbtree',
+        'num_leaves': trial.suggest_int('num_leaves', 20, 60),  # XGBoost에서는 num_leaves 대신 max_leaves가 있음. 그러나 생략 가능.
+        'min_child_weight': trial.suggest_float('min_child_weight', 0.1, 10.0),
+        'max_depth': trial.suggest_int('max_depth', 2, 10),
+        'subsample': trial.suggest_float('subsample', 0.5, 0.8),
+        'colsample_bytree': trial.suggest_float('colsample_bytree', 0.5, 0.8),
+        'learning_rate': trial.suggest_float('learning_rate', 0.001, 0.05, log=True),
+        'scale_pos_weight': trial.suggest_float('scale_pos_weight', 1.0, 50.0),
+        'reg_alpha': trial.suggest_float('reg_alpha', 1.0, 20.0),
+        'reg_lambda': trial.suggest_float('reg_lambda', 1.0, 20.0),
+        'n_estimators': trial.suggest_int('n_estimators', 100, 1000)
+    }
+
+    xgb_model = XGBClassifier(**param, random_state=42, use_label_encoder=False)
+    xgb_model.fit(X_train, y_train)
+    
+    y_val_pred = xgb_model.predict(X_val)
+    
+    f1 = f1_score(y_val, y_val_pred, pos_label=1) 
+    return f1
+
+study = optuna.create_study(direction='maximize')
+study.optimize(objective, n_trials=100)
+
+best_params = study.best_params
+print("Best params: ", best_params)
+
+best_xgb_model = XGBClassifier(**best_params, random_state=42, use_label_encoder=False)
+best_xgb_model.fit(X_train, y_train)
+
+y_val_pred = best_xgb_model.predict(X_val)
+
+print(classification_report(y_val, y_val_pred))
+print(f"Accuracy: {accuracy_score(y_val, y_val_pred)}")
+print(f"F1 Score: {f1_score(y_val, y_val_pred, pos_label=1)}")
+print(f"Precision: {precision_score(y_val, y_val_pred, pos_label=1)}")  
+print(f"Recall: {recall_score(y_val, y_val_pred, pos_label=1)}")
+```
+```
+y_train_pred = best_xgb_model.predict(X_train)
+y_train_pred_proba = best_xgb_model.predict_proba(X_train)[:, 1]
+
+y_test_pred = best_xgb_model.predict(X_val)
+y_test_pred_proba = best_xgb_model.predict_proba(X_val)[:, 1]
+
+print("Train Data Evaluation:")
+get_clf_eval(y_train, y_train_pred, y_train_pred_proba)
+print("\nValidation Data Evaluation:")
+get_clf_eval(y_val, y_test_pred, y_test_pred_proba)
+```
+다음과 같은 결과를 확인할 수 있다.
+```
+Train Data Evaluation:
+오차 행렬
+[[7461 1626]
+ [ 314 2461]]
+정확도: 0.8365, 정밀도: 0.6022, 재현율: 0.8868,    F1: 0.7173, AUC:0.9236
+
+Validation Data Evaluation:
+오차 행렬
+[[1848  471]
+ [ 122  525]]
+정확도: 0.8001, 정밀도: 0.5271, 재현율: 0.8114,    F1: 0.6391, AUC:0.8751
+```
+다음으로 var15에 대해 23보다 작으면 0으로 변환하는 작업을 하겠다.
+```
+test_df = pd.DataFrame(test_df, columns=columns)
+
+predict_santander_pred_xgb = best_xgb_model.predict(test_df)
+test_df['TARGET'] = predict_santander_pred_xgb
+
+test_y = test_df['TARGET']
+test_X = test_df.drop(['TARGET'], axis=1)
+
+test_df_original = sc.inverse_transform(test_X)
+test_df_original = pd.DataFrame(test_df_original, columns=columns)
+
+test_df_original['TARGET'] = test_y.values
+test_df_original.loc[test_df_original['var15'] < 23, 'TARGET'] = 0
+
+santander_submission_df['TARGET'] = test_df['TARGET']
+
+# 결과를 CSV 파일로 저장
+santander_submission_df.to_csv('santander_submission_lgbm.csv', index=False)
+santander_submission_df
+```
+best 파라미터로 학습한 모델을 통해 위의 코드를 실행하면 다음과 같이 결과가 나온다.
+![image](https://github.com/user-attachments/assets/fcf15518-f940-4182-8e85-a94edbe390ca)
+
+좋은 점수를 보여준다.
+```
+
+   #### LightGBM
+```
+import optuna
+
+def objective(trial):
+    param = {
+        'objective': 'binary',
+        'metric': 'binary_logloss',
+        'boosting_type': 'gbdt',
+        'num_leaves': trial.suggest_int('num_leaves', 20, 60),
+        'min_child_samples': trial.suggest_int('min_child_samples', 5, 100),
+        'min_child_weight': trial.suggest_float('min_child_weight', 0.1, 10.0),
+        'max_depth': trial.suggest_int('max_depth', 2, 10),
+        'subsample': trial.suggest_float('subsample', 0.5, 0.8),
+        'colsample_bytree': trial.suggest_float('colsample_bytree', 0.5, 0.8),
+        'learning_rate': trial.suggest_float('learning_rate', 0.001, 0.05, log=True),
+        'scale_pos_weight': trial.suggest_float('scale_pos_weight', 1.0, 50.0),
+        'reg_alpha': trial.suggest_float('reg_alpha', 1.0, 20.0),
+        'reg_lambda': trial.suggest_float('reg_lambda', 1.0, 20.0),
+        'n_estimators': trial.suggest_int('n_estimators', 100, 1000)
+    }
+
+    lgb_model = LGBMClassifier(**param, random_state=42, verbose=-1)
+    lgb_model.fit(X_train, y_train)
+    y_val_pred = lgb_model.predict(X_val)
+    f1 = f1_score(y_val, y_val_pred, pos_label=1) 
+    return f1
+
+study = optuna.create_study(direction='maximize')
+study.optimize(objective, n_trials=200)
+
+best_params = study.best_params
+print("Best params: ", best_params)
+
+best_lgb_model = LGBMClassifier(**best_params, random_state=42)
+best_lgb_model.fit(X_train, y_train)
+
+y_val_pred = best_lgb_model.predict(X_val)
+
+y_train_pred = best_lgb_model.predict(X_train)
+y_train_pred_proba = best_lgb_model.predict_proba(X_train)[:, 1]
+
+y_test_pred = best_lgb_model.predict(X_val)
+y_test_pred_proba = best_lgb_model.predict_proba(X_val)[:, 1]
+
+get_clf_eval(y_train, y_train_pred, y_train_pred_proba)
+get_clf_eval(y_val, y_test_pred, y_test_pred_proba)
+```
+결과는 아래와 같이 나온다. XGBoost가 재현율(Recall)과 F1 점수에서 더 좋은 성능을 보여주기 때문에, 특히 재현율이 중요한 문제(예: 질병 진단, 사기 탐지 등)에서는 XGBoost가 더 적합할 수 있다.
+```
+Train Data Evaluation:
+오차 행렬
+[[7468 1219]
+ [ 674 1999]]
+정확도: 0.8334, 정밀도: 0.6212, 재현율: 0.7478,    F1: 0.6787, AUC:0.8911
+
+Validation Data Evaluation:
+오차 행렬
+[[1901  335]
+ [ 176  428]]
+정확도: 0.8201, 정밀도: 0.5609, 재현율: 0.7086,    F1: 0.6262, AUC:0.8672
+```
+다음으로 모델이 예측한 값에서 var15의 값이 23보다 작을 경우 0으로 바꾸는 작업을 할 것이다.
+```
+# scaling으로 dataframe에서 ndarray로 변환된 값을 다시 dataframe으로 변환
+test_df = pd.DataFrame(test_df, columns=columns)
+
+# test_df를 예측한 후 test_df의 TARGET 컬럼을 만든 후 값을 저장
+# 이후 test_df를 X, y로 분리
+predict_santander_pred_xgb = best_lgb_model.predict(test_df)
+test_df['TARGET'] = predict_santander_pred_xgb
+test_y = test_df['TARGET']
+test_X = test_df.drop(['TARGET'], axis=1)
+
+# test_df를 inverse_transform()을 이용해 scaling 전으로 되돌린다.
+test_df_original = sc.inverse_transform(test_X)
+test_df_original = pd.DataFrame(test_df_original, columns=columns)
+test_df_original['TARGET'] = test_y.values
+
+# test_df_original에서 var15의 값이 23보다 작으면 0으로 변경
+test_df_original.loc[test_df_original['var15'] < 23, 'TARGET'] = 0
+
+# submission_df에 test_df_original의 TARGET을 저장
+santander_submission_df['TARGET'] = test_df_original['TARGET']
+santander_submission_df.to_csv('santander_submission_lgbm.csv', index=False)
+santander_submission_df
+```
+kaggle에 제출하면 다음과 같은 점수를 확인할 수 있다. 예상했듯이 XGBoost가 더 좋은 성능을 보여주고 있다.
+![image](https://github.com/user-attachments/assets/749092ee-2b0b-43b0-b7b2-65bc7c573650)
+
+   #### CatBoost
+다음으로 진행할 모델은 CatBoost이다. CatBoost는 범주형 변수가 많은 데이터셋에서 탁월한 성능을 보여준다. 하지만 다양한 유형의 데이터에서도 높은 성능을 발휘하며, 과적합 방지, 병렬 처리 및 효율적인 메모리 사용으로 학습과 예측이 빠르다는 장점이 있다. 또한, 자동 하이퍼파라미터 튜닝이 있어 편리하다. 하지만 필자는 하이퍼파라미터 튜닝을 optuna를 통해 할 예정이다.
+```
+from catboost import CatBoostClassifier
+
+def objective(trial):
+    param = {
+        'loss_function': 'Logloss',
+        'eval_metric': 'F1',
+        'iterations': trial.suggest_int('iterations', 100, 1000),
+        'depth': trial.suggest_int('depth', 4, 10),  # max_depth에 해당
+        'learning_rate': trial.suggest_float('learning_rate', 0.001, 0.05, log=True),
+        'l2_leaf_reg': trial.suggest_float('l2_leaf_reg', 1.0, 10.0),
+        'random_strength': trial.suggest_float('random_strength', 0.5, 2.0),
+        'border_count': trial.suggest_int('border_count', 32, 255),  # colsample_bytree에 해당하는 역할
+        'bagging_temperature': trial.suggest_float('bagging_temperature', 0.0, 1.0),
+        'scale_pos_weight': trial.suggest_float('scale_pos_weight', 1.0, 50.0)
+    }
+
+    cat_model = CatBoostClassifier(**param, random_state=42, verbose=0)
+    cat_model.fit(X_train, y_train, eval_set=(X_val, y_val), use_best_model=True, early_stopping_rounds=50)
+
+    y_val_pred = cat_model.predict(X_val)
+    f1 = f1_score(y_val, y_val_pred)
+    return f1
+
+study = optuna.create_study(direction='maximize')
+study.optimize(objective, n_trials=100)
+
+best_params = study.best_params
+print("Best params: ", best_params)
+
+best_cat_model = CatBoostClassifier(**best_params, random_state=42, verbose=0)
+best_cat_model.fit(X_train, y_train)
+
+y_val_pred = best_cat_model.predict(X_val)
+
+
+y_train_pred = best_cat_model.predict(X_train)
+y_train_pred_proba = best_cat_model.predict_proba(X_train)[:, 1]
+
+y_test_pred = best_cat_model.predict(X_val)
+y_test_pred_proba = best_cat_model.predict_proba(X_val)[:, 1]
+
+
+print("Train Data Evaluation:")
+get_clf_eval(y_train, y_train_pred, y_train_pred_proba)
+print("\nValidation Data Evaluation:")
+get_clf_eval(y_val, y_test_pred, y_test_pred_proba)
+```
+```
+Train Data Evaluation:
+오차 행렬
+[[6439  994]
+ [ 620 1615]]
+정확도: 0.8331, 정밀도: 0.6190, 재현율: 0.7226,    F1: 0.6668, AUC:0.8838
+
+Validation Data Evaluation:
+오차 행렬
+[[1578  285]
+ [ 192  362]]
+정확도: 0.8026, 정밀도: 0.5595, 재현율: 0.6534,    F1: 0.6028, AUC:0.8411
+```
+위와 같은 결과를 확인할 수 있다. XGBoost 보다는 과적합이 많이 해소된 것으로 보이지만 전체적으로 모델의 성능이 낮다. 특히, 정밀도가 낮은데, 이는 양성으로 예측한 것들 중 실제로 맞춘 비율이 낮다. 그럼에도 이번 데이터의 평가 지표인 AUC는 양호한 점수를 보여주고 있다. kaggle에 제출하면 아래와 같은 점수를 확인할 수 있다.
+![image](https://github.com/user-attachments/assets/f5b68839-dba9-420a-9d4c-1ad40252be86)
+
+   #### Ensemble
+마지막으로 진행할 모델은 Ensemble 이다. 여러 개의 모델을 결합하여 하나의 모델보다 더 나은 성능을 얻는 기법이다. 이런 방법을 사용하면 개별 모델이 가지는 약점을 보완하고 예측의 안정성을 높이는 데 유리하다.
+
+성능 향상: 개별 모델보다 더 높은 성능을 보일 수 있습니다.
+안정성: 하나의 모델에서 발생할 수 있는 오류나 편향을 줄입니다.
+유연성: 서로 다른 유형의 모델을 결합하여 더 복잡한 문제를 해결할 수 있습니다.
+위와 같은 장점이 있으며, Bagging (배깅), Boosting (부스팅), Stacking (스태킹), Voting (보팅)이 있다. 이번에는 보팅 그 중에서도 소프트 보팅을 사용하려고 한다. 보팅은 여러 개의 모델을 학습한 후, 각 모델의 예측값을 투표 방식으로 결합하여 최종 예측을 도출하는 방식이다. 다수결 또는 가중치 기반 방식으로 최종 결과를 산출할 수 있다.
+
+하드 보팅은 각 모델이 예측한 클래스(라벨) 중 다수결로 최종 클래스를 선택하며, 소프트 보팅은 모델들이 예측한 클래스 확률 값을 평균 내서 최종 클래스를 선택하는 것으로 확률 값이 반영되므로 더 정확한 예측이 가능할 수 있다.
+```
+from sklearn.ensemble import VotingClassifier, AdaBoostClassifier, RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
+from lightgbm import LGBMClassifier
+from catboost import CatBoostClassifier
+
+# 모델 정의
+decision_tree_clf = DecisionTreeClassifier(random_state=42)
+svm_clf = SVC(probability=True, random_state=42)
+log_reg_clf = LogisticRegression(random_state=42)
+adaboost_clf = AdaBoostClassifier(random_state=42)
+lgbm_clf = LGBMClassifier(random_state=42, verbose=-1)
+catboost_clf = CatBoostClassifier(random_state=42, verbose=0)
+rf_clf = RandomForestClassifier(random_state=42)
+
+# VotingClassifier를 사용한 소프트 보팅 모델 정의 (voting='soft')
+voting_clf = VotingClassifier(
+    estimators=[
+        ('decision_tree', decision_tree_clf), 
+        ('svm', svm_clf), 
+        ('log_reg', log_reg_clf),
+        ('adaboost', adaboost_clf), 
+        ('lgbm', lgbm_clf), 
+        ('catboost', catboost_clf), 
+        ('rf', rf_clf)
+    ], 
+    voting='soft'  # 소프트 보팅 사용
+)
+
+voting_clf.fit(X_train, y_train)
+y_pred = voting_clf.predict(X_val)
+
+accuracy = accuracy_score(y_val, y_pred)
+print(f"Soft Voting Classifier Accuracy: {accuracy:.4f}")
+
+# 개별 모델의 성능 확인 (각 모델의 성능도 출력)
+for clf in (decision_tree_clf, svm_clf, log_reg_clf, adaboost_clf, lgbm_clf, catboost_clf, rf_clf, voting_clf):
+    clf.fit(X_train, y_train)
+    y_pred = clf.predict(X_val)
+    print(f"{clf.__class__.__name__} Accuracy: {accuracy_score(y_val, y_pred):.4f}")
+```
+```
+Soft Voting Classifier Accuracy: 0.8481
+LGBMClassifier Accuracy: 0.8415
+CatBoostClassifier Accuracy: 0.8422
+XGBClassifier Accuracy: 0.8394
+RandomForestClassifier Accuracy: 0.8299
+SVC Accuracy: 0.7952
+```
+각각 모델에 대해 위의 결과처럼 출력이 된다. 비슷한 점수대를 보여주지만 VotingClassifier가 개별 모델들보다 약간 더 높은 성능을 보이고 있으므로 잘 작동하고 있다고 볼 수 있다. 
+```
+y_train_pred = voting_clf.predict(X_train)
+y_train_pred_proba = voting_clf.predict_proba(X_train)[:, 1]
+
+y_test_pred = voting_clf.predict(X_val)
+y_test_pred_proba = voting_clf.predict_proba(X_val)[:, 1]
+
+print("Train Data Evaluation:")
+get_clf_eval(y_train, y_train_pred, y_train_pred_proba)
+
+print("\nValidation Data Evaluation:")
+get_clf_eval(y_val, y_test_pred, y_test_pred_proba)
+```
+```
+Train Data Evaluation:
+오차 행렬
+[[8464  282]
+ [ 693 1962]]
+정확도: 0.9145, 정밀도: 0.8743, 재현율: 0.7390,    F1: 0.8010, AUC:0.9758
+
+Validation Data Evaluation:
+오차 행렬
+[[2069  148]
+ [ 285  349]]
+정확도: 0.8481, 정밀도: 0.7022, 재현율: 0.5505,    F1: 0.6172, AUC:0.8619
+```
+
+결과에 대한 평가는 다음과 같다. 이전에 학습했던 모델들에 비해 과적합이 다시 심해졌다. kaggle에 제출하면 다음과 같은 점수를 확인할 수 있다. Ensemble은 어떤 모델을 사용하냐에 따라 성능이 달라진다. 특히 Voting은 사용하는 개별 모델의 특성에 따라 성능이 크게 달라질 수 있기 때문에 모델 선택이 중요하다. 그 이유는 다음과 같다. 
+
+성능 향상의 핵심은 모델의 다양성으로 Voting 앙상블은 서로 다른 특성을 가진 모델을 결합할 때 더 효과적이기 때문이다. 동일한 특성을 가진 모델들을 결합하면 성능 개선 효과가 제한적일 수 있어 모델 선택이 중요하다. 따라서 지금과 같은 점수는 어떤 모델을 사용하냐에 따라 달라질 수 있다.
+![image](https://github.com/user-attachments/assets/9327ae2d-fb31-4199-99e9-2df484de82a3)
+
+---
+
+추가적으로 noise 값의 TARGET 값을 예측하지 않고 제거한 다음 LightGBM으로 예측했을 때가 가장 좋은 성능을 보여줬다. 결과는 아래와 같다.
+```
+Train Data Evaluation:
+오차 행렬
+[[5830 1506]
+ [ 519 1692]]
+정확도: 0.7879, 정밀도: 0.5291, 재현율: 0.7653,    F1: 0.6256, AUC:0.8581
+
+Validation Data Evaluation:
+오차 행렬
+[[1482  362]
+ [ 150  393]]
+정확도: 0.7855, 정밀도: 0.5205, 재현율: 0.7238,    F1: 0.6055, AUC:0.8385
+```
+train data의 결과가 재현율이 높은데 정밀도가 낮다. 즉, 양성 클래스를 잘 잡아내지만, 많은 잘못된 긍정 (False Positive)도 예측하고 있다. 그래도 이전에 비해 과적합이 많이 해소된 것을 확인할 수 있다. 재현율, 정밀도에 대한 해결 방법으로 정밀도와 재현율의 균형 조정, 모델 복잡도 줄이기, 모델 앙상블이 있다.
+
+결과를 kaggle에 제출했을 때 private, public 모두 이전과 많이 좋아진 것을 확인할 수 있다.
+![image](https://github.com/user-attachments/assets/b524df6f-6b21-4745-8293-3dc522473c30)
+
+베스트 파라미터는 아래와 같다.
+```
+Best params:  {'num_leaves': 44, 'min_child_samples': 30, 'min_child_weight': 7.026190601165056, 'max_depth': 3, 'subsample': 0.6587318096159958, 'colsample_bytree': 0.6087483644642271, 'learning_rate': 0.01961668163863785, 'scale_pos_weight': 2.762646582387838, 'reg_alpha': 2.1002708478959153, 'reg_lambda': 18.205433395806338, 'n_estimators': 586}
+```

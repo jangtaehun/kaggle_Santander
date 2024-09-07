@@ -272,15 +272,13 @@ y = cleaned_train['TARGET']
 ![image](https://github.com/user-attachments/assets/a89de785-8121-4456-a369-ba1529fbfc18)
 
 결과적으로 X에서 제거된 행의 개수는 2435의 행이 제거 되어 총 73290개의 행이 남는다. 따라서 동일한 행을 가지지만 다른 타겟 값을 가지는 행이 매우 많았다는 것을 알 수 있다. 다음으로 위에서 언급했듯 0과 var3의 -999999 값을 최빈값인 2로 대체한 후 var38의 117310.979016494를 -1로 대체하는 작업을 진행하겠다.
-
-   #### 5. Feature Engineering
-0에 대한 처리를 진행하겠다. 지금까지 확인했듯이 Santander에서 제공한 Santander Customer Satisfaction 데이터는 0이 굉장히 많다. 따라서 이 부분에 대해서도 적절한 처리가  필요하다. 필자는 각 행(row)에서 0의 갯수를 새로운 컬럼으로 저장할 것이다. 아래의 코드를 실행하면 다음과 같이 결과가 나온다.
 ```
-train_df['count_0'] = (train_df == 0).sum(axis=1)
-test_df['count_0'] = (test_df == 0).sum(axis=1)
-```
-![image](https://github.com/user-attachments/assets/6273c3a8-eead-400c-9299-342ba2683a94)
+X['var3'].replace(-999999, 2, inplace=True)
+test_df['var3'].replace(-999999, 2, inplace=True)
 
+X.loc[np.isclose(X['var38'], 117310.979016), 'var38'] = -1
+test_df.loc[np.isclose(test_df['var38'], 117310.979016), 'var38'] = -1
+```
 위의 코드를 통해 var3과 var38에 대해 처리를 했다.
 
 다음으로 isolationforest를 사용해 이상치 탐지를 하겠다. isolationforest는비지도학습 기반의 이상 탐지 알고리즘이다. 비지도 학습 중에서 이상치를 탐지하는 데 강력한 알고리즘이다. Santander Customer Satisfaction data는 이상치를 탐지하기 어려운 데이터라 모델을 통해 이상치를 제거했다.
@@ -319,6 +317,15 @@ X = X.drop(columns=['label'])  # 'label' 열 제거
 # y에서도 이상치 인덱스 제거
 y = y.drop(outlier_index)
 ```
+
+   #### 5. Feature Engineering
+0에 대한 처리를 진행하겠다. 지금까지 확인했듯이 Santander에서 제공한 Santander Customer Satisfaction 데이터는 0이 굉장히 많다. 따라서 이 부분에 대해서도 적절한 처리가  필요하다. 필자는 각 행(row)에서 0의 갯수를 새로운 컬럼으로 저장할 것이다. 아래의 코드를 실행하면 다음과 같이 결과가 나온다.
+```
+train_df['count_0'] = (train_df == 0).sum(axis=1)
+test_df['count_0'] = (test_df == 0).sum(axis=1)
+```
+![image](https://github.com/user-attachments/assets/6273c3a8-eead-400c-9299-342ba2683a94)
+
 다음으로 동일한 행을 가지지만 다른 타겟 값을 가지는 행이 있기 때문에 데이터를 5개로 나눈 후 모델을 학습해 노이즈 데이터에 대해 TARGET 값을 예측하겠다. 이유는 다음과 같다. 데이터를 나누어 여러 모델을 학습시키는 것은 모델의 안정성과 일반화 성능을 높이고, 데이터의 다양성을 충분히 반영하여 과적합을 방지할 수 있기 때문이다.
 ```
 import optuna

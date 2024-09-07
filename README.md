@@ -407,11 +407,9 @@ unique_var15_values
 ---
 
 ### 모델 학습
-RandomUnderSampler() 클래스를 이용해 데이터의 불균형을 해결하기 위한 코드이다. Santander Customer Satisfaction data는 불균형한 데이터이다. 따라서 이를 처리하기 위한 방법이 필요하다. 필자는 오버샘플링, 언더샘플링, 하이브리드 샘플링에서 언더샘플링을 선택했다. 
+RandomUnderSampler() 클래스를 이용해 데이터의 불균형을 해결하기 위한 코드이다. Santander Customer Satisfaction data는 불균형한 데이터이다. 따라서 이를 처리하기 위한 방법이 필요하다. 필자는 오버샘플링, 언더샘플링, 하이브리드 샘플링에서 언더샘플링을 선택했다. 이유는 다음과 같다. 언더 샘플링은 데이터에서 빈도가 높은 클래스의 표본 수를 감소시켜 빈도가 적은 클래스와 비슷한 수준으로 맞추는 방법이다. 다수 클래스의 표본 수를 줄이면 모델이 소수 클래스도 잘 학습할 수 있도록 도와준다. 또한, 과다표현된 클래스의 데이터를 줄여 소수 클래스에 대한 재현율을 높이고 모델의 편향을 방지하는 데 효과적이기 때문에 사용했다. 하지만 데이터 손실의 위험이 있기 때문에 조심해야 한다.
 
-특히, 여러 모델을 사용할 것이지만 LightGBM을 위주로 학습을 할 예정이다.
-
-먼저 모델을 학습하기 전에 데이터에 대한 처리를 먼저할 것이다. StandardScaler()를 통해 특성(Feature)의 값 범위를 표준화하거나 정규화하는 과정을 거치고 데이터를 언더 샘플링을 한 후 train 세트와 test 세트로 나눌 것이다.
+먼저 모델을 학습하기 전에 데이터에 대한 처리를 먼저할 것이다. StandardScaler()를 통해 특성(Feature)의 값 범위를 표준화하거나 정규화하는 과정을 거치고 데이터를 언더 샘플링을 한 후 train 세트와 test 세트로 나눌 것이다. 이후 언더샘플링을 진행하고 train, test 세트로 나눌 것이다.
 ```
 sc = StandardScaler()
 X = sc.fit_transform(X)
@@ -474,6 +472,7 @@ print(f"F1 Score: {f1_score(y_val, y_val_pred, pos_label=1)}")
 print(f"Precision: {precision_score(y_val, y_val_pred, pos_label=1)}")  
 print(f"Recall: {recall_score(y_val, y_val_pred, pos_label=1)}")
 ```
+
 ```
 y_train_pred = best_xgb_model.predict(X_train)
 y_train_pred_proba = best_xgb_model.predict_proba(X_train)[:, 1]

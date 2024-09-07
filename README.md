@@ -525,7 +525,7 @@ best 파라미터로 학습한 모델을 통해 위의 코드를 실행하면 �
 ![image](https://github.com/user-attachments/assets/fcf15518-f940-4182-8e85-a94edbe390ca)
 
 좋은 점수를 보여준다.
-```
+
 
    #### LightGBM
 ```

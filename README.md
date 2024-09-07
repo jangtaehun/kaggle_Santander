@@ -40,6 +40,7 @@ Kaggle에서 고객의 정보를 토대로 Santander 은행이 제공하는 서�
     * 이상치 탐색
     * Data cleaning
     * Feature Engineering
+    * noise 처리
 3. 모델 학습
   * XGBoost
   * LightGBM
@@ -326,6 +327,7 @@ test_df['count_0'] = (test_df == 0).sum(axis=1)
 ```
 ![image](https://github.com/user-attachments/assets/6273c3a8-eead-400c-9299-342ba2683a94)
 
+   #### 6. noise 처리
 다음으로 동일한 행을 가지지만 다른 타겟 값을 가지는 행이 있기 때문에 데이터를 5개로 나눈 후 모델을 학습해 노이즈 데이터에 대해 TARGET 값을 예측하겠다. 이유는 다음과 같다. 데이터를 나누어 여러 모델을 학습시키는 것은 모델의 안정성과 일반화 성능을 높이고, 데이터의 다양성을 충분히 반영하여 과적합을 방지할 수 있기 때문이다.
 ```
 import optuna

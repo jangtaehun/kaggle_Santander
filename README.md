@@ -85,7 +85,7 @@ Santander Customer Satisfaction data는 앞에서 말했듯 수백 개의 익명
 ---
 
 #### Santander Customer Satisfaction data set을 이용한 EDA
-   ##### 1. 공통 코드
+##### 1. 공통 코드
 ```
 def get_clf_eval(y_test, pred=None, pred_proba=None):
     confusion = confusion_matrix(y_test, pred)
@@ -133,7 +133,7 @@ def get_clf_eval(y_test, pred=None, pred_proba=None):
 오차행렬과 정확도, 재현율, 정밀도, F1 score, ROC 곡선과 AUC를 설명한 이유는 앞서 설명했듯 Santander Customer Satisfaction 대회가 ROC 곡선의 아래 면적 즉, AUC를 평가 지표로 하기 때문이다. 뿐만 아니라 이전 tatinic data에서도 사용했지만 따로 설명하지 않았기 때문에 간단하게 설명했다.
 
 ---
-
+##### 2. 분석
    #### 1. Santander Customer Satisfaction data set에 대한 기본적인 정보
 Santander Customer Satisfaction data는 아래 사진과 같이 모든 feature가 개인정보를 이유로 feature의 이름이 모두 익명처리 되어있다.
 ![image](https://github.com/user-attachments/assets/3e4b447e-91b2-487d-931f-4c78b6b60c96)

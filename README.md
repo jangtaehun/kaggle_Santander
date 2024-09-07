@@ -134,7 +134,7 @@ def get_clf_eval(y_test, pred=None, pred_proba=None):
 
 ---
 
-   ##### 1. Santander Customer Satisfaction data set에 대한 기본적인 정보
+   #### 1. Santander Customer Satisfaction data set에 대한 기본적인 정보
 Santander Customer Satisfaction data는 아래 사진과 같이 모든 feature가 개인정보를 이유로 feature의 이름이 모두 익명처리 되어있다.
 ![image](https://github.com/user-attachments/assets/3e4b447e-91b2-487d-931f-4c78b6b60c96)
 
@@ -151,7 +151,7 @@ rain_df.describe()
 
 출력된 내용을 보면 이상한 부분이 var3이다. var3의 경우 min 값이 -999999로 나온다. var3이 무엇인지는 몰라도 -999999는 충분히 의심할 수 있는 값이다. 아마 NaN인 값을 -999999로 대체했을 가능성이 있다. 따라서 var3과 같이 이상치가 있는 컬럼이 더 존재할 수 있기 때문에 확인이 필요하다.
 
-   ##### 2. Feature 분석
+   #### 2. Feature 분석
 먼저 feature의 수가 많으며, 정확히 어떤 데이터인지 확인이 불분명한 데이터 이기에 필요 없는 데이터와 필요한 데이터를 구분해야 한다. 따라서 모든 값이 NaN값인 컬럼은 drop하는 작업을 먼저 하겠다.
 ```
 all_nan_columns = train_df.columns[train_df.isna().all()].tolist()
@@ -174,16 +174,16 @@ print(f'고유값이 1인 컬럼 개수: {len(unique_one_columns)}')
 고유값이 1인 컬럼 개수: 34
 ```
 모든 값이 같은 컬럼을 drop하는 이유는 다음과 같다.
-* 1. 모든 샘플에서 동일한 값을 가지므로, 이 컬럼은 학습 데이터에서 어떠한 예측 정보도 제공하지 못 하기 때문이다.
-* 2. 불필요한 컬럼을 제거해 모델의 복잡성을 줄일 수 있다.
-* 3. 불필요한 컬럼이 많을 경우, 모델이 의미 없는 패턴을 학습하는 과적합 위험이 증가할 수 있기 때문이다.
-* 4. 데이터의 크기가 줄어들기 때문에 저장 공간과 처리 시간이 절약되기 때문에 대규모 데이터셋을 다룰 때 매우 중요하다.
+* 모든 샘플에서 동일한 값을 가지므로, 이 컬럼은 학습 데이터에서 어떠한 예측 정보도 제공하지 못 하기 때문이다.
+* 불필요한 컬럼을 제거해 모델의 복잡성을 줄일 수 있다.
+* 불필요한 컬럼이 많을 경우, 모델이 의미 없는 패턴을 학습하는 과적합 위험이 증가할 수 있기 때문이다.
+* 데이터의 크기가 줄어들기 때문에 저장 공간과 처리 시간이 절약되기 때문에 대규모 데이터셋을 다룰 때 매우 중요하다.
 위와 같은 이유로 고유값이 1인 컬럼 즉, 모든 값이 같은 컬럼을 drop하는 것이다.
 ![image](https://github.com/user-attachments/assets/a07a2207-cb60-403c-9aec-24f609277ed2)
 
 또한, 위의 describe() 메서드를 통해 얻은 결과에서 mean 값을 살펴보면 같은 값을 가진 컬럼이 존재하는 것을 확인할 수 있다. ind_var13_medio_0와 ind_var13_medio를 보면 mean 값이 같다. 즉, 두 개의 컬럼이 이름도 비슷하고 값도 같다. 따라서 이런 부분에 대해서도 처리가 필요하다. 이 부분 역시 나중에 제거를 할 것이다.
    
-   ##### 3. 이상치 탐색
+   #### 3. 이상치 탐색
 이상치 제거는 데이터에서 비정상적으로 크거나 작은 값, 즉 다른 데이터와 현저히 차이가 나는 값을 제거하거나 처리하는 것으로 데이터의 왜곡을 방지하기 위해 필요한 작업이다. 따라서 이상치를 탐색하고 처리하겠다.
 
 위에서 아래와 같이 describe() 메서드를 통해 요약된 정보를 확인했다. 이때 주목할 부분이 var3으로 min 값이 -999999로 되어있다. 따라서 Santander에서 제공한 데이터는 이상치가 포함된 값으로 이상치를 탐색한 후 이상치에 대한 적절한 처리를 해야 한다.
@@ -193,9 +193,8 @@ print(f'고유값이 1인 컬럼 개수: {len(unique_one_columns)}')
 ```
 train_df[train_df['var3']==-999999]
 ```
-![image](https://github.com/user-attachments/assets/36b948e0-1ce5-4472-ba28-8155cf4064f0)
-
 위의 코드를 실행해 아래와 같은 dataframe을 출력할 수 있다. var3의 값이 -999999인 값을 가진 row는 116개가 있다. 이 row는 다른 값 역시 이상치를 가질 확률이 있을 수 있다. 따라서 다른 컬럼에도 이상치가 있는지 여부를 확인하는 데 좋은 정보를 줄 수 있다.
+![image](https://github.com/user-attachments/assets/36b948e0-1ce5-4472-ba28-8155cf4064f0)
 ![image](https://github.com/user-attachments/assets/d95fadd2-7324-4f6d-9055-e348b81d05dc)
 
 var3이 -999999인 것만 따로 출력한 dataframe을 보면 0이 상당히 많다. 뿐만 아니라 var38의 경우 같은 값을 가진 숫자가 많다. 따라서 0의 갯수에 따른 처리와 var38에 대한 처리도 필요하다.

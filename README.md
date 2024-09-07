@@ -96,8 +96,7 @@ def get_clf_eval(y_test, pred=None, pred_proba=None):
 
     print('오차 행렬')
     print(confusion)
-    print('정확도: {0:.4f}, 정밀도: {1:.4f}, 재현율: {2:.4f},\
-    F1: {3:.4f}, AUC:{4:.4f}'.format(accuracy, precision, recall, f1, roc_auc))
+    print('정확도: {0:.4f}, 정밀도: {1:.4f}, 재현율: {2:.4f}, F1: {3:.4f}, AUC:{4:.4f}'.format(accuracy, precision, recall, f1, roc_auc))
 ```
 분류 모델의 성능을 평가하기 위해 공통 코드로 위와 같이 오차행렬, 정확도, 재현율, 정밀도, F1 score, ROC 곡선과 AUC를 평가하기 위해 다음과 같이 코드를 작성했다. 공통 코드는 모델을 사용했을 때마다 성능을 평가하기 위해 사용할 것으로 함수화 했다. 각각 설명은 다음과 같다.
 

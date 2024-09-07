@@ -194,7 +194,7 @@ train_df[train_df['var3']==-999999]
 ```
 위의 코드를 실행해 아래와 같은 dataframe을 출력할 수 있다. var3의 값이 -999999인 값을 가진 row는 116개가 있다. 이 row는 다른 값 역시 이상치를 가질 확률이 있을 수 있다. 따라서 다른 컬럼에도 이상치가 있는지 여부를 확인하는 데 좋은 정보를 줄 수 있다.
 ![image](https://github.com/user-attachments/assets/36b948e0-1ce5-4472-ba28-8155cf4064f0)
-![image](https://github.com/user-attachments/assets/d95fadd2-7324-4f6d-9055-e348b81d05dc)
+![image](https://github.com/user-attachments/assets/4b3430a4-054b-47b8-8b96-a9aca44ef842)
 
 var3이 -999999인 것만 따로 출력한 dataframe을 보면 0이 상당히 많다. 뿐만 아니라 var38의 경우 같은 값을 가진 숫자가 많다. 따라서 0의 갯수에 따른 처리와 var38에 대한 처리도 필요하다.
 
@@ -219,7 +219,8 @@ train_df['var38'].value_counts()
 2. var38의 117310.979016494를 새로운 열로 만들어 추가 (NaN 값 자체를 특성화)
 3. var38의 117310.979016494를 그대로 사용
 이렇게 총 6가지의 방법으로 테스트를 해보려고 한다.
-   
+
+
    #### 4. Data cleaning
 노이즈 제거는 데이터에서 불필요하거나 무작위적인 변동을 제거하여 데이터의 신호를 명확하게 하고, 분석 또는 모델링의 정확성을 높이는 것으로 데이터의 본질적인 신호를 더 잘 이해하거나 예측하기 위해 필요한 작업이다. 따라서 노이즈를 탐색하고 처리하겠다.
 

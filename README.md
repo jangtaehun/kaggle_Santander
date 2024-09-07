@@ -49,3 +49,21 @@ Kaggle에서 고객의 정보를 토대로 Santander 은행이 제공하는 서�
   * 한계점
 
 ---
+
+#### 문제에 대한 정보 수집
+   ##### 문제 정의
+Santander Customer Satisfaction에 대한 data는 고객의 만족도를 개선하기 위해 kaggle에 데이터를 제공해주었다. 따라서 Kaggle에서 고객의 정보를 토대로 Santander 은행이 제공하는 서비스에 불만족을 느끼는 고객을 식별하는 대회가 2016년에 진행되었다.
+
+train.csv을 기반으로 적절한 EDA를 진행한 후 test.csv의 데이터를 이용해 예측한 후 결과를sample_submission.csv와 결합한 후 제출하고 제출하면 된다.
+
+![image](https://github.com/user-attachments/assets/5026c767-5401-4087-a83c-8baaa8955859)
+
+Santander Customer Satisfaction data는 위와 같이 모든 feature가 개인정보를 이유로 feature의 이름이 모두 익명처리 되어있다. 따라서 어떤 속성인지 추정할 수 없다.
+
+TARGET으로는 1은 불만족, 0은 만족한 고객을 나타내며, 고객의 만족도를 예측하는 문제이다. 뿐만 아니라 평가지표로는 다음과 같이 공지되어 있다.
+
+![image](https://github.com/user-attachments/assets/a883b253-d187-4af2-aca2-dcd435bde71e)
+
+<www.kaggle.com/competitions/santander-customer-satisfaction/overview/evaluation>
+
+ROC 곡선의 아래 면적을 기준으로 평가된다. 따라서 모델의 예측 성능을 AUC로 측정하며, 높은 AUC를 얻는 것이 대회에서 좋은 성적을 얻는 데 중요하다.

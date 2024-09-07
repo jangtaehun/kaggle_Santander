@@ -51,8 +51,8 @@ Kaggle에서 고객의 정보를 토대로 Santander 은행이 제공하는 서�
 
 ---
 
-#### 문제에 대한 정보 수집
-   ##### 1. 문제 정의
+### 문제에 대한 정보 수집
+   #### 1. 문제 정의
 Santander Customer Satisfaction에 대한 data는 고객의 만족도를 개선하기 위해 kaggle에 데이터를 제공해주었다. 따라서 Kaggle에서 고객의 정보를 토대로 Santander 은행이 제공하는 서비스에 불만족을 느끼는 고객을 식별하는 대회가 2016년에 진행되었다.
 
 train.csv을 기반으로 적절한 EDA를 진행한 후 test.csv의 데이터를 이용해 예측한 후 결과를sample_submission.csv와 결합한 후 제출하고 제출하면 된다.
@@ -71,7 +71,7 @@ ROC 곡선의 아래 면적을 기준으로 평가된다. 따라서 모델의 �
 
 ---
 
-   ##### 2. 분석 대상에 대한 이해
+   #### 2. 분석 대상에 대한 이해
 Santander 은행은 스페인 산탄데르에 1867년에 설립되 유럽 최대 기업 및 은행이다. Santander 은행은 다른 세계적인 은행과 다른 특징이 있다. 대형 은행들은 투자금융 분야 규모가 크다. 하지만 Santander 은행은 수익의 큰 부분이 소매금융에서 나온다. 즉, 금융기관인 Santander 은행이 개인에게 금융 서비스를 제공하는 것이 수익의 큰 부분이다.
 
 소매금융에서 나오는 수익이 크기 때문에 Santander 은행은 고객의 만족, 불만족에 큰 관심을 가지게 된 것으로 kaggle에 feature 이름이 익명처리된 data를 제공한 것이다.
@@ -84,8 +84,8 @@ Santander Customer Satisfaction data는 앞에서 말했듯 수백 개의 익명
 
 ---
 
-#### Santander Customer Satisfaction data set을 이용한 EDA
-##### 1. 공통 코드
+### Santander Customer Satisfaction data set을 이용한 EDA
+#### 1. 공통 코드
 ```
 def get_clf_eval(y_test, pred=None, pred_proba=None):
     confusion = confusion_matrix(y_test, pred)
@@ -133,8 +133,8 @@ def get_clf_eval(y_test, pred=None, pred_proba=None):
 오차행렬과 정확도, 재현율, 정밀도, F1 score, ROC 곡선과 AUC를 설명한 이유는 앞서 설명했듯 Santander Customer Satisfaction 대회가 ROC 곡선의 아래 면적 즉, AUC를 평가 지표로 하기 때문이다. 뿐만 아니라 이전 tatinic data에서도 사용했지만 따로 설명하지 않았기 때문에 간단하게 설명했다.
 
 ---
-##### 2. 분석
-   #### 1. Santander Customer Satisfaction data set에 대한 기본적인 정보
+#### 2. 분석
+   ##### 1. Santander Customer Satisfaction data set에 대한 기본적인 정보
 Santander Customer Satisfaction data는 아래 사진과 같이 모든 feature가 개인정보를 이유로 feature의 이름이 모두 익명처리 되어있다.
 ![image](https://github.com/user-attachments/assets/3e4b447e-91b2-487d-931f-4c78b6b60c96)
 
@@ -151,7 +151,7 @@ rain_df.describe()
 
 출력된 내용을 보면 이상한 부분이 var3이다. var3의 경우 min 값이 -999999로 나온다. var3이 무엇인지는 몰라도 -999999는 충분히 의심할 수 있는 값이다. 아마 NaN인 값을 -999999로 대체했을 가능성이 있다. 따라서 var3과 같이 이상치가 있는 컬럼이 더 존재할 수 있기 때문에 확인이 필요하다.
 
-   #### 2. Feature 분석
+   ##### 2. Feature 분석
 먼저 feature의 수가 많으며, 정확히 어떤 데이터인지 확인이 불분명한 데이터 이기에 필요 없는 데이터와 필요한 데이터를 구분해야 한다. 따라서 모든 값이 NaN값인 컬럼은 drop하는 작업을 먼저 하겠다.
 ```
 all_nan_columns = train_df.columns[train_df.isna().all()].tolist()
@@ -183,7 +183,7 @@ print(f'고유값이 1인 컬럼 개수: {len(unique_one_columns)}')
 
 또한, 위의 describe() 메서드를 통해 얻은 결과에서 mean 값을 살펴보면 같은 값을 가진 컬럼이 존재하는 것을 확인할 수 있다. ind_var13_medio_0와 ind_var13_medio를 보면 mean 값이 같다. 즉, 두 개의 컬럼이 이름도 비슷하고 값도 같다. 따라서 이런 부분에 대해서도 처리가 필요하다. 이 부분 역시 나중에 제거를 할 것이다.
    
-   #### 3. 이상치 탐색
+   ##### 3. 이상치 탐색
 이상치 제거는 데이터에서 비정상적으로 크거나 작은 값, 즉 다른 데이터와 현저히 차이가 나는 값을 제거하거나 처리하는 것으로 데이터의 왜곡을 방지하기 위해 필요한 작업이다. 따라서 이상치를 탐색하고 처리하겠다.
 
 위에서 아래와 같이 describe() 메서드를 통해 요약된 정보를 확인했다. 이때 주목할 부분이 var3으로 min 값이 -999999로 되어있다. 따라서 Santander에서 제공한 데이터는 이상치가 포함된 값으로 이상치를 탐색한 후 이상치에 대한 적절한 처리를 해야 한다.
@@ -199,7 +199,7 @@ train_df[train_df['var3']==-999999]
 
 var3이 -999999인 것만 따로 출력한 dataframe을 보면 0이 상당히 많다. 뿐만 아니라 var38의 경우 같은 값을 가진 숫자가 많다. 따라서 0의 갯수에 따른 처리와 var38에 대한 처리도 필요하다.
 
-##### var3
+###### var3
 1. var3에 대해 -999999를 가장 많은 값을 가지고 있는 2로 대체 (최빈값으로 대체)
 아래의 코드를 통해 얻은 결과를 보면 va3 컬럼에서 가장 많은 값을 가지고 있는 값은 2이다. 따라서 2로 -999999를 대체하는 방법을 적용해 볼 것이다.
 ```
@@ -210,7 +210,7 @@ train_df['var3'].value_counts()
 2. va3에 대해 -999999를 NaN 값에 대한 처리로 예상하고 있기 때문에 값을 -1로 대체 (고정값 대체)
 3. var3의 -999999를 새로운 열로 만들어 추가 (NaN 값 자체를 특성화)
 
-##### var38
+###### var38
 필자는 var38에서 117310.979016494의 값이 var38에서 NaN 값을 평균으로 대체한 값이라 생각한다. 그 이유는 다음과 같다. 필자는 마지막에 있는 vr38이 고객의 자산이지 않을까 조심스럽게 예측하고 있다. 이때 아래의 코드를 통해 얻은 결과를 보면 자산이 같은 값이 14868개라 보기엔 이상하다. var3에 대해서는 -999999가 이상치라 구분이 갔지만 var38에 대해서는 57736개의 nunique가 있는데 유독 하나의 값에 몰려 있다는 것은 이상하다 보기 때문이다. 따라서 이 부분에 대해서도 처리를 해보려고 한다.
 ```
 train_df['var38'].value_counts()
@@ -221,7 +221,7 @@ train_df['var38'].value_counts()
 3. var38의 117310.979016494를 그대로 사용
 이렇게 총 6가지의 방법으로 테스트를 해보려고 한다.
 
-#### 4. Data cleaning
+##### 4. Data cleaning
 노이즈 제거는 데이터에서 불필요하거나 무작위적인 변동을 제거하여 데이터의 신호를 명확하게 하고, 분석 또는 모델링의 정확성을 높이는 것으로 데이터의 본질적인 신호를 더 잘 이해하거나 예측하기 위해 필요한 작업이다. 따라서 노이즈를 탐색하고 처리하겠다.
 
 다음으로 같은 같은 피처(특징)를 가진 행이 서로 다른 클래스 레이블(TARGET)을 가지는 경우를 찾아서 처리하는 작업을 진행하려 한다. 먼저 ID, TARGET 컬럼을 제거 및 분리하는 작업을 하겠다.
@@ -319,7 +319,7 @@ X = X.drop(columns=['label'])  # 'label' 열 제거
 y = y.drop(outlier_index)
 ```
 
-   #### 5. Feature Engineering
+   ##### 5. Feature Engineering
 0에 대한 처리를 진행하겠다. 지금까지 확인했듯이 Santander에서 제공한 Santander Customer Satisfaction 데이터는 0이 굉장히 많다. 따라서 이 부분에 대해서도 적절한 처리가  필요하다. 필자는 각 행(row)에서 0의 갯수를 새로운 컬럼으로 저장할 것이다. 아래의 코드를 실행하면 다음과 같이 결과가 나온다.
 ```
 train_df['count_0'] = (train_df == 0).sum(axis=1)
@@ -327,7 +327,7 @@ test_df['count_0'] = (test_df == 0).sum(axis=1)
 ```
 ![image](https://github.com/user-attachments/assets/6273c3a8-eead-400c-9299-342ba2683a94)
 
-   #### 6. noise 처리
+   ##### 6. noise 처리
 다음으로 동일한 행을 가지지만 다른 타겟 값을 가지는 행이 있기 때문에 데이터를 5개로 나눈 후 모델을 학습해 노이즈 데이터에 대해 TARGET 값을 예측하겠다. 이유는 다음과 같다. 데이터를 나누어 여러 모델을 학습시키는 것은 모델의 안정성과 일반화 성능을 높이고, 데이터의 다양성을 충분히 반영하여 과적합을 방지할 수 있기 때문이다.
 ```
 import optuna
@@ -420,4 +420,4 @@ unique_var15_values
 
 ---
 
-#### 모델 학습
+### 모델 학습

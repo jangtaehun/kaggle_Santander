@@ -124,10 +124,10 @@ def get_clf_eval(y_test, pred=None, pred_proba=None):
 이진 분류 모델에서 업무 특성에 따라 특정 평가 지표가 더 중요한 지표로 간주될 수 있다. 재현율은 실제 Positive 양성 데이터를 Negative로 잘못 판단하게 되면 큰 영향이 발생하는 의료 분야에서 중요하다. 정밀도는 Negative 데이터를 Positive 데이터로 잘못 판단하게 되면 큰 영향이 발생하는 스팸 메일 판정에서 중요하다.
 
    ###### F1 score = 정밀도와 재현율을 결합한 지표
-     ###### F1 점수가 높다는 것은 모델이 정확하게 예측하면서도 많은 긍정적인 사례를 잡아내고 있다는 의미
+      F1 점수가 높다는 것은 모델이 정확하게 예측하면서도 많은 긍정적인 사례를 잡아내고 있다는 의미
    ###### ROC 곡선과 AUC = 이진 분류에서 예측 성능 측정에서 중요하게 사용되는 지표
-     ###### ROC 곡선은 FPR(False Positive Rate)이 변할 때 TPR(True Positive Rate)이 어떻게 변하는지를 나타내는 곡선이다. FPR을 X축으로, TPR을 Y 축으로 잡으면 FPR의 변화에 따른 TPR의 변화가 곡선 형태로 나타난다.
-     ###### 분류의 성능 지표로 사용되는 것은 ROC 곡선 면적에 기반한 AUC 값으로 결정한다.
-     ###### AUC(Area Under Curve) 값은 ROC 곡선 밑의 면적을 구한 것으로서 일반적으로 1에 가까울 수록 좋은 수치이다.
+      ROC 곡선은 FPR(False Positive Rate)이 변할 때 TPR(True Positive Rate)이 어떻게 변하는지를 나타내는 곡선이다. FPR을 X축으로, TPR을 Y 축으로 잡으면 FPR의 변화에 따른 TPR의 변화가 곡선 형태로 나타난다.
+      분류의 성능 지표로 사용되는 것은 ROC 곡선 면적에 기반한 AUC 값으로 결정한다.
+      AUC(Area Under Curve) 값은 ROC 곡선 밑의 면적을 구한 것으로서 일반적으로 1에 가까울 수록 좋은 수치이다.
      
 오차행렬과 정확도, 재현율, 정밀도, F1 score, ROC 곡선과 AUC를 설명한 이유는 앞서 설명했듯 Santander Customer Satisfaction 대회가 ROC 곡선의 아래 면적 즉, AUC를 평가 지표로 하기 때문이다. 뿐만 아니라 이전 tatinic data에서도 사용했지만 따로 설명하지 않았기 때문에 간단하게 설명했다.

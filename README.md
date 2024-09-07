@@ -198,3 +198,217 @@ train_df[train_df['var3']==-999999]
 ![image](https://github.com/user-attachments/assets/d95fadd2-7324-4f6d-9055-e348b81d05dc)
 
 var3이 -999999인 것만 따로 출력한 dataframe을 보면 0이 상당히 많다. 뿐만 아니라 var38의 경우 같은 값을 가진 숫자가 많다. 따라서 0의 갯수에 따른 처리와 var38에 대한 처리도 필요하다.
+   
+   ##### var3
+1. var3에 대해 -999999를 가장 많은 값을 가지고 있는 2로 대체 (최빈값으로 대체)
+아래의 코드를 통해 얻은 결과를 보면 va3 컬럼에서 가장 많은 값을 가지고 있는 값은 2이다. 따라서 2로 -999999를 대체하는 방법을 적용해 볼 것이다.
+```
+train_df['var3'].value_counts()
+```
+![image](https://github.com/user-attachments/assets/6279b6a6-0833-4895-b471-0db92d7ae21c)
+2. va3에 대해 -999999를 NaN 값에 대한 처리로 예상하고 있기 때문에 값을 -1로 대체 (고정값 대체)
+3. var3의 -999999를 새로운 열로 만들어 추가 (NaN 값 자체를 특성화)
+
+   ##### var38
+필자는 var38에서 117310.979016494의 값이 var38에서 NaN 값을 평균으로 대체한 값이라 생각한다. 그 이유는 다음과 같다. 필자는 마지막에 있는 vr38이 고객의 자산이지 않을까 조심스럽게 예측하고 있다. 이때 아래의 코드를 통해 얻은 결과를 보면 자산이 같은 값이 14868개라 보기엔 이상하다. var3에 대해서는 -999999가 이상치라 구분이 갔지만 var38에 대해서는 57736개의 nunique가 있는데 유독 하나의 값에 몰려 있다는 것은 이상하다 보기 때문이다. 따라서 이 부분에 대해서도 처리를 해보려고 한다.
+```
+train_df['var38'].value_counts()
+```
+![image](https://github.com/user-attachments/assets/7cf52567-c5fd-4034-b3c6-46248a9d36ec)
+1. va38에 대해 117310.979016494를 NaN 값에 대한 처리로 예상하고 있기 때문에 값을 -1로 대체 (고정값 대체)
+2. var38의 117310.979016494를 새로운 열로 만들어 추가 (NaN 값 자체를 특성화)
+3. var38의 117310.979016494를 그대로 사용
+이렇게 총 6가지의 방법으로 테스트를 해보려고 한다.
+
+   #### 4. Data cleaning
+노이즈 제거는 데이터에서 불필요하거나 무작위적인 변동을 제거하여 데이터의 신호를 명확하게 하고, 분석 또는 모델링의 정확성을 높이는 것으로 데이터의 본질적인 신호를 더 잘 이해하거나 예측하기 위해 필요한 작업이다. 따라서 노이즈를 탐색하고 처리하겠다.
+
+다음으로 같은 같은 피처(특징)를 가진 행이 서로 다른 클래스 레이블(TARGET)을 가지는 경우를 찾아서 처리하는 작업을 진행하려 한다. 먼저 ID, TARGET 컬럼을 제거 및 분리하는 작업을 하겠다.
+```
+train_df.drop(['ID'], axis=1, inplace=True)
+test_df.drop(['ID'], axis=1, inplace=True)
+
+y = train_df['TARGET']
+X = train_df.drop('TARGET', axis=1)
+```
+ID와 TARGET을 제거한 다음 위에서 확인했던 고유값이 1인 컬럼을 제거할 것이다. 아래의 코드를 이용해 제거를 하면 총 34의 컬럼을 제거해 남은 컬럼은 337개의 컬럼만 남는다.
+```
+unique_one_columns = [col for col in train_df.columns if train_df[col].nunique() == 1]
+print(f'고유값이 1인 컬럼 개수: {len(unique_one_columns)}')
+
+train_df.drop(columns=unique_one_columns, inplace=True, axis=1)
+test_df.drop(columns=unique_one_columns, inplace=True, axis=1)
+```
+이번에도 위에서 확인했듯 같은 값을 가진 컬럼을 제거할 것이다. 아래와 같은 코드를 실행하면 다음과 같이 결과를 얻을 수 있다. 
+```
+duplicate_columns = []
+columns = train_df.columns
+
+for i in range(len(columns)):
+    for j in range(i + 1, len(columns)):
+        if train_df[columns[i]].equals(train_df[columns[j]]):
+            duplicate_columns.append((columns[i], columns[j]))
+
+for col1, col2 in duplicate_columns:
+    print(f"{col1} == {col2}")
+    train_df.drop([col2], axis=1, inplace=True)
+    test_df.drop([col2], axis=1, inplace=True)
+```
+![image](https://github.com/user-attachments/assets/7960ab5d-3dff-4456-a01e-fc4bb7604fe5)
+
+위에 있는 출력 값들이 모두 서로 같은 값을 가진 컬럼이다. var6_0, var29_0, var6, var29가 서로 같은 값을 가진다는 것을 제외하면 모든 컬럼이 비슷한 이름을 가진 것을 알 수 있다. 이 컬럼들을 제거하면 29개의 컬럼이 추가적으로 삭제되어 308개의 column이 남는다.
+```
+train_with_target = pd.concat([X, y], axis=1)
+duplicates = train_with_target.duplicated(keep=False)
+duplicates_with_different_target = duplicates & (train_with_target.groupby(list(X.columns))['TARGET'].transform('nunique') > 1)
+
+noise = train_with_target[duplicates_with_different_target]
+cleaned_train = train_with_target[~duplicates_with_different_target]
+
+X = cleaned_train.drop('TARGET', axis=1)
+y = cleaned_train['TARGET']
+```
+이번에는 column이 아닌 row에서 data cleaning을 하려고 한다. noise 즉, 중복된 피처 값을 가진 데이터 중에서 타겟 값이 다른 데이터를 확인하고 제거하고자 한다. 위의 코드를 출력해보면 아래와 같다. 총 2435개의 행이 중복된 것이다.
+![image](https://github.com/user-attachments/assets/a89de785-8121-4456-a369-ba1529fbfc18)
+
+결과적으로 X에서 제거된 행의 개수는 2435의 행이 제거 되어 총 73290개의 행이 남는다. 따라서 동일한 행을 가지지만 다른 타겟 값을 가지는 행이 매우 많았다는 것을 알 수 있다. 다음으로 위에서 언급했듯 0과 var3의 -999999 값을 최빈값인 2로 대체한 후 var38의 117310.979016494를 -1로 대체하는 작업을 진행하겠다.
+
+   #### 5. Feature Engineering
+0에 대한 처리를 진행하겠다. 지금까지 확인했듯이 Santander에서 제공한 Santander Customer Satisfaction 데이터는 0이 굉장히 많다. 따라서 이 부분에 대해서도 적절한 처리가  필요하다. 필자는 각 행(row)에서 0의 갯수를 새로운 컬럼으로 저장할 것이다. 아래의 코드를 실행하면 다음과 같이 결과가 나온다.
+```
+train_df['count_0'] = (train_df == 0).sum(axis=1)
+test_df['count_0'] = (test_df == 0).sum(axis=1)
+```
+![image](https://github.com/user-attachments/assets/6273c3a8-eead-400c-9299-342ba2683a94)
+
+위의 코드를 통해 var3과 var38에 대해 처리를 했다.
+
+다음으로 isolationforest를 사용해 이상치 탐지를 하겠다. isolationforest는비지도학습 기반의 이상 탐지 알고리즘이다. 비지도 학습 중에서 이상치를 탐지하는 데 강력한 알고리즘이다. Santander Customer Satisfaction data는 이상치를 탐지하기 어려운 데이터라 모델을 통해 이상치를 제거했다.
+```
+from sklearn.ensemble import IsolationForest
+import plotly.express as px 
+
+# 비지도학습 기반의 이상 탐지 알고리즘
+clf = IsolationForest(
+    n_estimators=50, 
+    max_samples=50, 
+    contamination=float(0.004), 
+    max_features=1.0, 
+    bootstrap=False, 
+    n_jobs=-1, 
+    verbose=0)
+
+# 모델 학습
+clf.fit(X)
+pred = clf.predict(X)
+
+# 예측 결과를 데이터프레임에 추가
+X['label'] = pred
+
+# 이상치 데이터 추출 / 1=정상, -1=이상치
+outliers = X.loc[X['label'] == -1]
+outlier_index = list(outliers.index)
+
+# 이상치와 정상치 개수 출력
+print(X['label'].value_counts()) 
+
+# 이상치를 제외한 데이터 추출
+X = X.loc[X['label'] != -1]
+X = X.drop(columns=['label'])  # 'label' 열 제거
+
+# y에서도 이상치 인덱스 제거
+y = y.drop(outlier_index)
+```
+다음으로 동일한 행을 가지지만 다른 타겟 값을 가지는 행이 있기 때문에 데이터를 5개로 나눈 후 모델을 학습해 노이즈 데이터에 대해 TARGET 값을 예측하겠다. 이유는 다음과 같다. 데이터를 나누어 여러 모델을 학습시키는 것은 모델의 안정성과 일반화 성능을 높이고, 데이터의 다양성을 충분히 반영하여 과적합을 방지할 수 있기 때문이다.
+```
+import optuna
+import xgboost as xgb
+from scipy.sparse import csr_matrix
+
+train_parts = np.array_split(X, 5)
+train_y_parts = np.array_split(y, 5)
+
+def objective(trial):
+    param = {
+        'objective': 'binary:logistic',
+        'eval_metric': 'auc',
+        'eta': trial.suggest_float('learning_rate', 0.001, 0.05, log=True),
+        'max_depth': trial.suggest_int('max_depth', 2, 10),
+        'min_child_weight': trial.suggest_float('min_child_weight', 0.1, 10.0),
+        'subsample': trial.suggest_float('subsample', 0.5, 0.8),
+        'colsample_bytree': trial.suggest_float('colsample_bytree', 0.5, 0.8),
+        'scale_pos_weight': trial.suggest_float('scale_pos_weight', 1.0, 50.0),
+        'alpha': trial.suggest_float('reg_alpha', 1.0, 20.0),
+        'lambda': trial.suggest_float('reg_lambda', 1.0, 20.0),
+        'n_estimators': trial.suggest_int('n_estimators', 100, 1000)
+    }
+
+    f1_scores = []
+
+    for train_part, train_y_part in zip(train_parts, train_y_parts):
+        dtrain = xgb.DMatrix(csr_matrix(train_part.values), label=train_y_part)   
+        bst = xgb.train(param, dtrain, num_boost_round=500)
+        y_val_pred = (bst.predict(dtrain) > 0.5).astype(int)
+        f1 = f1_score(train_y_part, y_val_pred)
+        f1_scores.append(f1)
+
+    return np.mean(f1_scores)
+
+study = optuna.create_study(direction='maximize')
+study.optimize(objective, n_trials=100)
+
+best_params = study.best_params
+print("Best hyperparameters:", best_params)
+```
+```
+param = {
+    'objective': 'binary:logistic',
+    'eval_metric': 'auc',
+    'eta': best_params['learning_rate'],
+    'max_depth': best_params['max_depth'],
+    'min_child_weight': best_params['min_child_weight'],
+    'subsample': best_params['subsample'],
+    'colsample_bytree': best_params['colsample_bytree'],
+    'scale_pos_weight': best_params['scale_pos_weight'],
+    'alpha': best_params['reg_alpha'],
+    'lambda': best_params['reg_lambda'],
+    'n_estimators': best_params['n_estimators']
+}
+
+bst_models = []
+
+# 5개의 파트에 대해 학습
+for train_part, train_y_part in zip(train_parts, train_y_parts):
+    dtrain = xgb.DMatrix(csr_matrix(train_part.values), label=train_y_part)
+    bst = xgb.train(param, dtrain, num_boost_round=500)
+    bst_models.append(bst)
+
+# 노이즈 데이터 예측
+noise['TARGET'] = 0  # 초기값 설정
+dnoise = xgb.DMatrix(csr_matrix(noise.drop('TARGET', axis=1).values))
+noise_preds = np.mean([bst.predict(dnoise) for bst in bst_models], axis=0)
+
+# 0.5 이상이면 1로, 그렇지 않으면 0으로 설정
+noise['TARGET'] = (noise_preds >= 0.5).astype(int)
+
+# noise 데이터와 원래 train 데이터 병합
+X = pd.concat([X, noise.drop('TARGET', axis=1)])
+y = pd.concat([y, noise['TARGET']])
+
+# 최종 데이터 크기 출력
+print(f"Final train shape: {X.shape}")
+print(f"Final train_y shape: {y.shape}")
+```
+위의 코드와 같이 진행하면 noise로 분류되어 삭제되었던 부분의 TARGET을 새롭게 예측해 isolationforest로 제거한 이상치 행을 제외한 75725개의 행만 남는다. 추가적으로 var15에 대해서도 추가적인 분석을 진행하던 중 특정 패턴을 발견했다. 
+```
+var15_values_when_target_1 = train_df[train_df['TARGET'] == 1]['var15']
+
+unique_var15_values = np.sort(var15_values_when_target_1.unique())
+unique_var15_values
+```
+위와 같이 코드를 입력하고 실행했을 때 아래와 같이 출력이 된다. var15는 5부터 값이 있는 것으로 23보다 작으면 모든 값이 0이라는 것이다. 따라서 var15가 23보다 작으면 0으로 하드코딩을 할 수 있다.
+![image](https://github.com/user-attachments/assets/9f0b90c9-88b0-4921-a636-8cb77192a3fb)
+
+---
+
+#### 모델 학습

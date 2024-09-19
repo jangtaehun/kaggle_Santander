@@ -1,4 +1,4 @@
-### 👨‍🏫 Santander Customer Satisfaction - Machine Learning from Disaster
+### 👨‍🏫 Santander Customer Satisfaction
 kaggle에서 제공하는 Santander Customer Satisfaction를 이용해 EDA와 model 학습을 통해 고객 만족도를 예측하는 프로젝트
 
 ---
